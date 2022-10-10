@@ -40,6 +40,12 @@ func GenerateToken() (string, error) {
 	return tokenString, nil
 }
 
+type CustomClaims struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	jwt.StandardClaims
+}
+
 func ValidateToken(tokenSigned string) (res map[string]interface{}, err error) {
 	publicKeyFile, err := os.Open("/home/ivan/Projects/go/golang-jwt/go-jws/certs/publickey.pem")
 	if err != nil {
@@ -57,7 +63,7 @@ func ValidateToken(tokenSigned string) (res map[string]interface{}, err error) {
 		panic(err)
 	}
 
-	token, err := jwt.Parse(tokenSigned, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenSigned, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
 		_, ok := token.Method.(*jwt.SigningMethodRSA)
 		if !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -68,10 +74,10 @@ func ValidateToken(tokenSigned string) (res map[string]interface{}, err error) {
 		panic(err)
 	}
 
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+	if claims, ok := token.Claims.(*CustomClaims); ok && token.Valid {
 		res = make(map[string]interface{}, 2)
-		res["username"] = claims["username"]
-		res["password"] = claims["password"]
+		res["username"] = claims.Username
+		res["password"] = claims.Password
 		return
 	}
 
